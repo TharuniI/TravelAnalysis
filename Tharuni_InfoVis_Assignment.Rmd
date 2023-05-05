@@ -1,0 +1,248 @@
+```{r, echo=FALSE,include=FALSE}
+
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(ggplot2)
+library(patchwork)
+map_packages <- c("tidygeocoder", "sf", "ozmaps", "maps", "mapdata", "mapproj","rgdal","rmapshaper", "devtools")
+library(tidygeocoder)
+library(maps)
+graphics.off()
+rm(list = ls())
+
+
+preset_theme <- 
+  theme(plot.title = element_text(size = 15, face = "bold",hjust = 0.5),
+  plot.subtitle = element_text(size = 10),
+  legend.title = element_text(size = 10),
+  legend.position="right",
+  legend.text = element_text(size=10),
+  # axis.text.y = element_text(size=12),
+  plot.caption = element_text(size = 10,hjust = 0.5),
+  plot.margin = unit(c(0.3,0.3,0.3,0.3), "cm"))
+```
+
+---
+title: "Analyzing Travel Data Sets"
+output:
+  html_document:
+    df_print: paged
+---
+#### Information Visualization: Final Assignment. Faculty of Science, Ontario Tech University. 
+#### Tharuni Iranjan, 100694352. Dr Livingstone.
+##### April 2nd, 2023
+
+ <br>     
+
+##### Purpose
+I will be graduating this semester! One thing I would be looking forward to is travelling. With so many places to visit in the world, its hard to determine where to go. I want to use this project to do an analysis on countries. Using different data sets and graphs, I want to create a visualization to determine where to visit and why.  <br> 
+
+ <br>  
+ 
+##### Figure 1: Where to Visit
+**Description**:
+This is a geographical map of the world emphasising the most visited countries. <br>
+**Datasets**: 
+[Most Visited Countries of the World](https://www.kaggle.com/datasets/batrosjamali/most-visited-countries-in-the-world), [Latitude and Longitude for Every Country](https://www.kaggle.com/datasets/paultimothymooney/latitude-and-longitude-for-every-country-and-state) <br>
+
+```{r, echo=FALSE,include=FALSE, warning=FALSE}
+# Load Datasests #
+# First thing I did was clean the data, and combine accordingly
+top_countries <- read.csv(file=file.path("country_datasets", "new_most_visited_countries.csv"), header=T)
+colnames(top_countries)[colnames(top_countries) == "Location"] <- "region"
+# call on builtin dataset 
+world_data <- map_data("world")
+# combine the above two datasets by the column name Location
+country_data <- left_join(world_data, top_countries, by = "region") |> as_tibble() |> rename(lon = long) 
+
+# get top 10 countries
+top_10_countries <- top_countries |> 
+  arrange(desc(touristArrivals)) |> 
+  slice(1:10) 
+# load and combine long and lat
+long_lat <- read.csv(file=file.path("country_datasets", "new_country_latitude_longitudes.csv"), header=T)
+top_10_data <- left_join(top_10_countries, long_lat, by = "region")
+
+
+# Create Graph 1 - Map #
+# create map of entire world in grayscale
+world_map <- ggplot(country_data, aes(x = lon, y = lat, group = group, fill = touristArrivals)) +
+  geom_polygon(color = "white") +
+  theme_void()
+
+# plot points for top 10
+figure1 <- world_map + 
+  geom_point(data = top_10_data, 
+             aes(x = lon, y = lat, group = region, color = "red")) + 
+  labs(title = "Most Visited Countries of the World", 
+       fill = "Number of Tourists", color = "Top 10 Countries") + 
+  preset_theme
+
+top_10_countries <- top_10_data$region
+```
+
+```{r, echo=FALSE}
+top_10_countries
+figure1
+```
+
+**Findings**: This graph tells us that Europe is a highly visited area, along with parts of Asia and North America. In red I have dots to represent the top 10 most visited countries, which all seem to be in the northern hempisphere. <br>  
+
+  <br>
+
+##### Figure 2: Where to Stay
+**Description**:
+One place from the top visited countries that I wanted tour myself is Thailand. There are so many places to stay, it's hard to choose the best. Using this data set, I want to make a bar plot to help me visualize the best resort for what I am looking for.
+<br>
+**Dataset**: 
+[Thailand Resort Dataset](https://www.kaggle.com/datasets/aakashshinde1507/resorts-in-thailand) <br>
+
+```{r, echo=FALSE,include=FALSE, warning=FALSE}
+# Load Datasests #
+thailand <- read.csv(file=file.path("country_datasets", "thailand_resorts.csv"), header=T)
+thailand$Price <- as.numeric(gsub("[^0-9.]+", "", thailand$Price))
+
+# arange prices from lowest to highest and get top 5
+thailand_dataset <- thailand |>
+  distinct(ResortName, .keep_all = TRUE) |>
+  arrange(Price) |> 
+  head(8) |>
+  select(ResortName, Price, Rating, Condition) |>
+  filter(Condition %in% c("Superb", "Fabulous", "Good") )
+
+# only display the first word of each resort name since they are long
+top_resorts <- thailand_dataset
+thailand_dataset$ResortName <- sapply(strsplit(as.character(thailand_dataset$ResortName ), " "), `[`, 1)
+
+fill_order <- c("Superb", "Fabulous", "Good")
+
+figure2 <- thailand_dataset |>
+  ggplot(aes(x = ResortName, y = Rating, fill = Condition)) + 
+  ggtitle("Top 5 Cheapest Thailand Resorts") + 
+  labs(x = "Resort Name") +
+  scale_fill_discrete(breaks = fill_order) +
+  scale_fill_manual(values = c("blue", "lightblue", "darkblue")) +
+  geom_bar(stat = "identity") + 
+  preset_theme
+
+top_resorts <- top_resorts$ResortName
+```
+
+```{r, echo=FALSE}
+top_resorts
+figure2
+```
+
+**Findings**: I am looking for a budget friendly trip (aka I am broke). So to find a place to stay, I filtered the data to get the 5 cheapest resorts. After knowing this information, I plotted the data by number of ratings, and the overall condition of the resort. Looking at the results, Bananas Resort and Restaurant is the best place to stay on a budget in Thailand. <br>  
+  
+  <br>
+  
+##### Figure 3: Why Stay Here
+**Description**:
+For this graph I want to visualize how number of reviews might affect the ratings of a resort. 
+<br>
+**Dataset**: 
+[Thailand Resort Dataset](https://www.kaggle.com/datasets/aakashshinde1507/resorts-in-thailand) <br>
+
+```{r, echo=FALSE,include=FALSE, warning=FALSE}
+# Load Datasests #
+thailand <- read.csv(file=file.path("country_datasets", "thailand_resorts.csv"), header=T)
+
+thailand$TotalReviews <- as.numeric(gsub("[^0-9.]+", "", thailand$TotalReviews))
+thailand_data <- thailand |>
+  group_by(Rating) |>
+  summarise(ReviewAvg = mean(TotalReviews)) 
+  # select(Rating, TotalReviews)
+
+figure3 <- thailand_data |>
+  ggplot(aes(x = Rating, y = ReviewAvg)) + 
+  ggtitle("Rating vs Reviews for Thailand Resorts") + 
+  labs(x = "Resort Rating", y = "Total Reviews") +
+  scale_x_continuous(breaks = 1:10) +
+  geom_line(colour = "darkblue") +
+  preset_theme
+  
+```
+
+```{r, echo=FALSE, warning=FALSE}
+figure3
+```
+
+**Findings**: This graph tells me that most of the resorts were rated 4 and above. Peaks can also be seen in the 6.5 and 9.0 range. This tells us that people who give very high and very low ratings don't usually give a review. <br>  
+  
+  <br>
+  
+  
+##### Figure 4: Why You Should Visit a Country
+**Description**:
+This is graph uses facet_wrap to figure out the correlation between different factors and the number of visits a country gets. <br>
+**Datasets**: 
+  [Most Visited Countries of the World](https://www.kaggle.com/datasets/batrosjamali/most-visited-countries-in-the-world), [Cost of Living Index](https://www.kaggle.com/datasets/ankanhore545/cost-of-living-index-2022), [World Crime Index](https://www.kaggle.com/datasets/ahmadjalalmasood123/world-crime-index), [World Sanitation & Health](https://www.kaggle.com/datasets/navinmundhra/world-sanitation?select=Basic+and+safely+managed+drinking+water+services.csv) <br>
+  
+  
+```{r, echo=FALSE, eval = FALSE}
+# Load Datasests #
+# Cleaned all the datasets and combined using column Location, and saved into a new file
+# Note: does not need to be run
+
+# most visited countries of the world
+top_countries <- read.csv(file=file.path("country_datasets_uncleaned", "most_visited_countries.csv"), header=T)
+
+# crime rate
+world_crime <- read.csv(file=file.path("country_datasets_uncleaned", "world_crime.csv"), header=T)
+last_indexes <- sapply(strsplit(world_crime$City, ","), tail, n = 1)
+world_crime$City <- last_indexes
+world_crime$City <- trimws(world_crime$City)
+colnames(world_crime)[colnames(world_crime) == "City"] <- "Location"
+colnames(world_crime)[colnames(world_crime) == "Rank"] <- "CrimeRank"
+world_crime <- aggregate(cbind(CrimeRank, CrimeIndex, SafetyIndex) ~ Location, world_crime, mean)
+
+
+# sanitation ranking per country
+sanitary <- read.csv(file=file.path("country_datasets_uncleaned", "world_sanitation.csv"), header=T)
+avg_sanitary <- aggregate(cbind(Numeric) ~ Country, water, mean)
+colnames(avg_sanitary)[colnames(avg_sanitary) == "Numeric"] <- "SanitationAvg"
+colnames(avg_sanitary)[colnames(avg_sanitary) == "Country"] <- "Location"
+new_sanitary <- subset(avg_sanitary, select = -c(Indicator, PUBLISH.STATES, Year, WHO.region, Residence.Area.Type, Display.Value, High, Low, Comments))
+
+# living costs
+living_costs <- read.csv(file=file.path("country_datasets_uncleaned", "new_living_costs.csv"), header=T)
+
+merged_data <- inner_join(top_countries, world_crime, by = "Location") |>
+  inner_join(new_sanitary, by = "Location") |>
+  inner_join(living_costs, by = "Location")
+
+write.csv(file=file.path("country_datasets", "combind_country_info.csv"), header=T)
+
+```
+  
+```{r, echo=FALSE,include=FALSE, warning=FALSE}
+# Graph 4 - Scatter Plots #
+combined_data <- read.csv(file=file.path("country_datasets", "combind_country_info.csv"), header=T)
+
+combined_data <- combined_data |>
+  select(Location, touristArrivals, 
+         Living.Cost.Index, SafetyIndex, Sanitation.Avg) |> 
+  pivot_longer(3:5, names_to = "IndexType", values_to = "IndexValue")
+
+pattern <- "\\.(\\w)"
+replacement <- " \\1"
+combined_data$IndexType <- 
+  gsub(pattern, replacement, combined_data$IndexType, perl = TRUE)
+
+figure4 <- ggplot(combined_data, aes(x = IndexValue, y = touristArrivals, colour = IndexValue)) +
+  geom_point(size = 2) +
+  facet_wrap(vars(IndexType), ncol = 3) +
+  labs(title = "Factors Affecting Travel",
+       x = "Index", y = "Number of Visitors") + 
+  preset_theme
+```
+
+```{r, echo=FALSE}
+figure4
+```
+
+**Findings**: This graph tells us that living costs, safety, and the overall sanitation level play role in whether people visit a country or not. For living cost, we can see most of the data residing to the left. This means that lower costs is corrleated to higher travel rates. Countries in the mid-range on the safety index seem to have the highest travel rate. Finally, we can see that a country must be very clean for higher travel rates. <br>  
+  
+  <br>
