@@ -29,14 +29,13 @@ output:
   html_document:
     df_print: paged
 ---
-#### Information Visualization: Final Assignment. Faculty of Science, Ontario Tech University. 
-#### Tharuni Iranjan, 100694352. Dr Livingstone.
+#### Tharuni Iranjan
 ##### April 2nd, 2023
 
  <br>     
 
 ##### Purpose
-I will be graduating this semester! One thing I would be looking forward to is travelling. With so many places to visit in the world, its hard to determine where to go. I want to use this project to do an analysis on countries. Using different data sets and graphs, I want to create a visualization to determine where to visit and why.  <br> 
+With so many places to visit in the world, its hard to determine where to go on your travels. Using a series of plots and graphs, I want to visually analyze various different country and travel related data sets to determine where to travel to, when and why. <br> 
 
  <br>  
  
@@ -90,91 +89,9 @@ figure1
 **Findings**: This graph tells us that Europe is a highly visited area, along with parts of Asia and North America. In red I have dots to represent the top 10 most visited countries, which all seem to be in the northern hempisphere. <br>  
 
   <br>
-
-##### Figure 2: Where to Stay
-**Description**:
-One place from the top visited countries that I wanted tour myself is Thailand. There are so many places to stay, it's hard to choose the best. Using this data set, I want to make a bar plot to help me visualize the best resort for what I am looking for.
-<br>
-**Dataset**: 
-[Thailand Resort Dataset](https://www.kaggle.com/datasets/aakashshinde1507/resorts-in-thailand) <br>
-
-```{r, echo=FALSE,include=FALSE, warning=FALSE}
-# Load Datasests #
-thailand <- read.csv(file=file.path("country_datasets", "thailand_resorts.csv"), header=T)
-thailand$Price <- as.numeric(gsub("[^0-9.]+", "", thailand$Price))
-
-# arange prices from lowest to highest and get top 5
-thailand_dataset <- thailand |>
-  distinct(ResortName, .keep_all = TRUE) |>
-  arrange(Price) |> 
-  head(8) |>
-  select(ResortName, Price, Rating, Condition) |>
-  filter(Condition %in% c("Superb", "Fabulous", "Good") )
-
-# only display the first word of each resort name since they are long
-top_resorts <- thailand_dataset
-thailand_dataset$ResortName <- sapply(strsplit(as.character(thailand_dataset$ResortName ), " "), `[`, 1)
-
-fill_order <- c("Superb", "Fabulous", "Good")
-
-figure2 <- thailand_dataset |>
-  ggplot(aes(x = ResortName, y = Rating, fill = Condition)) + 
-  ggtitle("Top 5 Cheapest Thailand Resorts") + 
-  labs(x = "Resort Name") +
-  scale_fill_discrete(breaks = fill_order) +
-  scale_fill_manual(values = c("blue", "lightblue", "darkblue")) +
-  geom_bar(stat = "identity") + 
-  preset_theme
-
-top_resorts <- top_resorts$ResortName
-```
-
-```{r, echo=FALSE}
-top_resorts
-figure2
-```
-
-**Findings**: I am looking for a budget friendly trip (aka I am broke). So to find a place to stay, I filtered the data to get the 5 cheapest resorts. After knowing this information, I plotted the data by number of ratings, and the overall condition of the resort. Looking at the results, Bananas Resort and Restaurant is the best place to stay on a budget in Thailand. <br>  
-  
-  <br>
-  
-##### Figure 3: Why Stay Here
-**Description**:
-For this graph I want to visualize how number of reviews might affect the ratings of a resort. 
-<br>
-**Dataset**: 
-[Thailand Resort Dataset](https://www.kaggle.com/datasets/aakashshinde1507/resorts-in-thailand) <br>
-
-```{r, echo=FALSE,include=FALSE, warning=FALSE}
-# Load Datasests #
-thailand <- read.csv(file=file.path("country_datasets", "thailand_resorts.csv"), header=T)
-
-thailand$TotalReviews <- as.numeric(gsub("[^0-9.]+", "", thailand$TotalReviews))
-thailand_data <- thailand |>
-  group_by(Rating) |>
-  summarise(ReviewAvg = mean(TotalReviews)) 
-  # select(Rating, TotalReviews)
-
-figure3 <- thailand_data |>
-  ggplot(aes(x = Rating, y = ReviewAvg)) + 
-  ggtitle("Rating vs Reviews for Thailand Resorts") + 
-  labs(x = "Resort Rating", y = "Total Reviews") +
-  scale_x_continuous(breaks = 1:10) +
-  geom_line(colour = "darkblue") +
-  preset_theme
-  
-```
-
-```{r, echo=FALSE, warning=FALSE}
-figure3
-```
-
-**Findings**: This graph tells me that most of the resorts were rated 4 and above. Peaks can also be seen in the 6.5 and 9.0 range. This tells us that people who give very high and very low ratings don't usually give a review. <br>  
-  
-  <br>
   
   
-##### Figure 4: Why You Should Visit a Country
+##### Figure 2: Why You Should Visit a Country
 **Description**:
 This is graph uses facet_wrap to figure out the correlation between different factors and the number of visits a country gets. <br>
 **Datasets**: 
@@ -218,12 +135,12 @@ write.csv(file=file.path("country_datasets", "combind_country_info.csv"), header
 ```
   
 ```{r, echo=FALSE,include=FALSE, warning=FALSE}
-# Graph 4 - Scatter Plots #
+# Graph 2 - Scatter Plots #
 combined_data <- read.csv(file=file.path("country_datasets", "combind_country_info.csv"), header=T)
 
 combined_data <- combined_data |>
   select(Location, touristArrivals, 
-         Living.Cost.Index, SafetyIndex, Sanitation.Avg) |> 
+         Living.Cost.Index, CrimeIndex, Sanitation.Avg) |> 
   pivot_longer(3:5, names_to = "IndexType", values_to = "IndexValue")
 
 pattern <- "\\.(\\w)"
@@ -231,7 +148,7 @@ replacement <- " \\1"
 combined_data$IndexType <- 
   gsub(pattern, replacement, combined_data$IndexType, perl = TRUE)
 
-figure4 <- ggplot(combined_data, aes(x = IndexValue, y = touristArrivals, colour = IndexValue)) +
+figure2 <- ggplot(combined_data, aes(x = IndexValue, y = touristArrivals, colour = IndexValue)) +
   geom_point(size = 2) +
   facet_wrap(vars(IndexType), ncol = 3) +
   labs(title = "Factors Affecting Travel",
@@ -240,9 +157,124 @@ figure4 <- ggplot(combined_data, aes(x = IndexValue, y = touristArrivals, colour
 ```
 
 ```{r, echo=FALSE}
-figure4
+figure2
 ```
 
 **Findings**: This graph tells us that living costs, safety, and the overall sanitation level play role in whether people visit a country or not. For living cost, we can see most of the data residing to the left. This means that lower costs is corrleated to higher travel rates. Countries in the mid-range on the safety index seem to have the highest travel rate. Finally, we can see that a country must be very clean for higher travel rates. <br>  
   
   <br>
+  
+##### Figure 3: When to Travel within America
+**Description**:
+This is graph compares the price of travel to different quaters of the year to conclude when the best time of travel is for domestic flights in America. <br>
+**Datasets**: 
+[Top 1000 City-Pair Markets](https://data.transportation.gov/Aviation/Consumer-Airfare-Report-Table-2-Top-1-000-City-Pai/wqw2-rjgd) <br>
+  
+```{r, echo=FALSE,include=FALSE, warning=FALSE}
+# Load Datasests #
+flights <- read.csv(file=file.path("country_datasets", "american_flights.csv"), header=T)
+
+# Filter data for the last 10 years
+last_5_years <- flights %>%
+  filter(Year >= max(Year) - 4)
+
+years_before_last_5 <- flights %>%
+  filter(Year >= 2012 & Year <= 2017)
+
+# create graph
+figure3a <- ggplot(last_5_years, aes(x = quarter, y = cur_fare, group = Year, color = factor(Year))) +
+  geom_line(size = 1.2) +  # Increase the line size
+  ggtitle("American Domestic Flight Fares by Quarter (2018-2022)") +
+  xlab("Quarter") +
+  ylab("Fare") +
+  theme_minimal() +
+  scale_color_manual(name = "Year", values = c("#0066CC", "#99CCFF", "#00AA99", "#00CCFF", "#003366"))  # Specify shades of blue and green colors
+
+
+figure3b <- ggplot(years_before_last_5, aes(x = quarter, y = cur_fare, group = Year, color = factor(Year))) +
+  geom_line(size = 1.2) +  # Increase the line size
+  ggtitle("American Domestic Flight Fares by Quarter (2012-2017)") +
+  xlab("Quarter") +
+  ylab("Fare") +
+  theme_minimal() +
+  scale_color_manual(name = "Year", values = c("#8B0000", "#DC143C", "purple", "pink", "orange", "red"))  # Specify shades of blue and green colors
+
+
+
+figure3 <- ggplot() +
+  geom_line(data = last_5_years, aes(x = quarter, y = cur_fare, group = Year, color = factor(Year)), size = 1.5) +
+  geom_line(data = years_before_last_5, aes(x = quarter, y = cur_fare, group = Year, color = factor(Year)), size = 1, linetype = "dashed") +
+  ggtitle("American Domestic Flight Fares by Quarter") +
+  xlab("Quarter") +
+  ylab("Fare") +
+  theme_minimal() +
+  scale_color_manual(name = "Year", values = c("#FF6633", "#FF9933", "#FFCC66", "#FF9900", "#CC3300", "#0066CC", "#99CCFF", "#00AA99", "#00CCFF", "#003366"))
+  
+  
+
+
+
+
+
+```
+
+```{r, echo=FALSE}
+figure3a
+figure3b
+```
+
+**Findings**: Due to COVID-19 travelling has been unpredictable the past 5 years. You can see fare prices drop by the second quarter of 2020, which is when a global pandemic was declared. However, if we look at pricing 4 years before the pandemic, there is a little more consistency. You can notice flight fares start low at the start of the first quarter and slowly increase into the second. Second quarter remains fairly consistent, whereas in the third you can see a steady decline in price as you enter the final quarter. Based off this information, someone planning to travel within America, should consider booking for during the end of fourth quarter continuing to the start of first quarter.  <br>  
+  
+  <br>
+
+##### Figure 4: Where to Stay in Thailand
+**Description**:
+One place from the top visited countries that I wanted tour myself is Thailand. There are so many places to stay, it's hard to choose the best. Using this data set, I want to make a bar plot to help me visualize the best resort for what I am looking for.
+<br>
+**Dataset**: 
+[Thailand Resort Dataset](https://www.kaggle.com/datasets/aakashshinde1507/resorts-in-thailand) <br>
+
+```{r, echo=FALSE,include=FALSE, warning=FALSE}
+# Load Datasests #
+thailand <- read.csv(file=file.path("country_datasets", "thailand_resorts.csv"), header=T)
+thailand$Price <- as.numeric(gsub("[^0-9.]+", "", thailand$Price))
+
+# arange prices from lowest to highest and get top 5
+thailand_dataset <- thailand |>
+  distinct(ResortName, .keep_all = TRUE) |>
+  arrange(Price) |> 
+  head(8) |>
+  select(ResortName, Price, Rating, Condition) |>
+  filter(Condition %in% c("Superb", "Fabulous", "Good") )
+
+# only display the first word of each resort name since they are long
+top_resorts <- thailand_dataset
+thailand_dataset$ResortName <- sapply(strsplit(as.character(thailand_dataset$ResortName ), " "), `[`, 1)
+
+fill_order <- c("Superb", "Fabulous", "Good")
+
+figure2 <- thailand_dataset |>
+  ggplot(aes(x = ResortName, y = Rating, fill = Condition)) + 
+  ggtitle("Top 5 Cheapest Thailand Resorts") + 
+  labs(x = "Resort Name") +
+  scale_fill_discrete(breaks = fill_order) +
+  scale_fill_manual(values = c("blue", "lightblue", "darkblue")) +
+  geom_bar(stat = "identity") + 
+  preset_theme
+
+top_resorts <- top_resorts$ResortName
+```
+
+```{r, echo=FALSE}
+top_resorts
+figure2
+```
+
+**Findings**: I am looking for a budget friendly trip. So to find a place to stay, I filtered the data to get the 5 cheapest resorts. After knowing this information, I plotted the data by number of ratings, and the overall condition of the resort. Looking at the results, Bananas Resort and Restaurant is the best place to stay on a budget in Thailand. <br>  
+  
+  <br>
+
+##### Limitations
+The size requirement of datasets, and the number of openly available data regarding this subject matter is fairly limited. Further research and development of data sets could help provide analysis on questions like where to travel, when and why can be answered more easily and accurately. <br> 
+
+ <br>  
